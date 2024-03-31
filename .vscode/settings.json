@@ -1,6 +1,6 @@
 {
     "workbench.iconTheme": "material-icon-theme",
-    "workbench.colorTheme": "Gitpod Dark",
+    "workbench.colorTheme": "GitHub Blue",
     "terminal.integrated.fontSize": 16,
     "editor.fontSize": 16,
     "files.autoSave": "afterDelay",

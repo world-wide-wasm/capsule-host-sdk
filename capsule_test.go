@@ -9,6 +9,13 @@ import (
 	"github.com/world-wide-wasm/capsule-host-sdk/wasm"
 )
 
+func TestVersion(t *testing.T)  {
+	if (Version() == "0.0.0") == false {
+		t.Fatalf("Expected: 0.0.0, result: %v ", Version())
+	}
+	
+}
+
 func TestGetEnvVarsFromString(t *testing.T) {
 	os.Setenv("FIRST_NAME", "Bob")
 	os.Setenv("LAST_NAME", "Morane")
