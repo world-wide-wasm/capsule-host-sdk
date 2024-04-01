@@ -1,4 +1,2 @@
 github.com/tetratelabs/wazero v1.7.0 h1:jg5qPydno59wqjpGrHph81lbtHzTrWzwwtD4cD88+hQ=
 github.com/tetratelabs/wazero v1.7.0/go.mod h1:ytl6Zuh20R/eROuyDaGPkp82O9C/DJfXAwJfQ3X6/7Y=
-github.com/world-wide-wasm/capsule-host-sdk v0.0.0-20240331063815-0662baa6b24a h1:NYXDw7qGmSSrQcEEUWWwbsKZMH8V6BLpRpg2QKLin6s=
-github.com/world-wide-wasm/capsule-host-sdk v0.0.0-20240331063815-0662baa6b24a/go.mod h1:Ro/+byf6EcdAAl3f290+qnJA4Rk8Dc9BchLL6DFJha0=

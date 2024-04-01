@@ -5,16 +5,6 @@ Capsule Host SDK (HDK) is a WebAssembly SDK, based on Wazero, to build WebAssemb
 
 
 ## Docker 
-> - Use this project with DevContainer
-> - ✋ this image works only on a arm architecture
-> - 🚧 TODO: create a multiarch image
 
-Build the workspace image:
-```bash
-docker compose build
-```
+You can use this project with DevContainer or Gitpod (this Docker image `image: k33g/capsule-workspace:0.0.0` is multiarch)
 
-Push the workspace image to the Docker hub:
-```bash
-docker compose push
-```
