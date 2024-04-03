@@ -28,10 +28,10 @@ func GetBody(request *http.Request) string { // what todo if it's a json string?
 /*
 GetHeader returns the header od an HTTP request
 */
-func GetHeader(request *http.Request) (string, error) {
+func GetHeader(header map[string][]string) (string, error) {
 
 	// Marshal the map to a JSON byte slice
-	jsonData, err := json.Marshal(request.Header)
+	jsonData, err := json.Marshal(header)
 	if err != nil {
 		return fmt.Sprintf(`{"error":"%s"}`, err.Error()), err
 	}
@@ -40,8 +40,6 @@ func GetHeader(request *http.Request) (string, error) {
 
 	return jsonString, err
 }
-
-// datetime := fmt.Sprintf("%s,%s", date, time)
 
 /*
 GetJSON returns a JSON byte slice form a map
@@ -71,13 +69,13 @@ func GetJSONString(data map[string]string) (string, error) {
 /*
 GetContentType returns a string with the content type from the request
 */
-func GetContentType(request *http.Request) string {
+func GetContentType(header map[string][]string) string {
 
-	value1, ok := request.Header["Content-Type"]
+	value1, ok := header["Content-Type"]
 	if ok {
 		return value1[0]
 	}
-	value2, ok := request.Header["content-type"]
+	value2, ok := header["content-type"]
 	if ok {
 		return value2[0]
 	}
@@ -87,9 +85,9 @@ func GetContentType(request *http.Request) string {
 /*
 ContentType returns a string depending of the content type (text, html and json)
 */
-func ContentType(request *http.Request) string {
+func ContentType(header map[string][]string) string {
 
-	value := strings.Split(GetContentType(request), ";")[0]
+	value := strings.Split(GetContentType(header), ";")[0]
 	//fmt.Println("✋", value)
 	switch {
 	case value == "text/plain":
@@ -102,15 +100,9 @@ func ContentType(request *http.Request) string {
 		return value
 	}
 }
-/*
-text/plain: Plain text data (e.g., log messages).
-text/html: HTML code for web pages.
-application/json: JSON formatted data (commonly used for APIs).
-*/
 
 func main() {
 
-	//fmt.Println(capsule.Version())
 	//wasmFilePath := "../../functions/hello/hello.wasm"
 	//wasmFilePath := "../../functions/hello-print/hello-print.wasm"
 	wasmFilePath := "../../functions/nano-service/nano-service.wasm"
@@ -131,74 +123,76 @@ func main() {
 	wasm.StorePlugin(&runtime, &module)
 
 	mux.HandleFunc("/", func(response http.ResponseWriter, request *http.Request) {
-
+		/*
 		if request.URL.Path != "/" {
 			http.NotFound(response, request)
 			return
 		}
+		*/
+
+		wasm.Protection.Lock()
+		// don't forget to release the lock on the Mutex
+		defer wasm.Protection.Unlock()
+
+		var body string
 
 		switch request.Method {
 		case http.MethodGet:
-			response.Write([]byte("capsule loves wasm"))
-
+			body = ""
 		case http.MethodPost:
-
-			wasm.Protection.Lock()
-			// don't forget to release the lock on the Mutex
-			defer wasm.Protection.Unlock()
-
-			body := GetBody(request)
-			header, err := GetHeader(request) // default value of header is "{}" if error
-			if err != nil {
-				log.Printf("😡 error with the header: %s, default value: %s", err, header)
-			}
-			contentType := ContentType(request)
-
-			// ✋ depending the content type I need to encode the body string (text/html/json ...)
-			// 🚧 TODO: method to get the content type
-
-			/*
-				Header = map[string][]string{
-					"Accept-Encoding": {"gzip, deflate"},
-					"Accept-Language": {"en-us"},
-					"Foo": {"Bar", "two"},
-				}
-			*/
-
-			requestData := map[string]string{
-				"body":   body,
-				"header": header, // -> JSON string
-				"type": contentType,
-			}
-
-			funcParam, err := GetJSON(requestData)
-			if err != nil {
-				log.Printf("😡 error with the function parameter: %s, default value: %s", err, funcParam)
-			}
-
-			//fmt.Println("✋ Body:", string(body))
-
-			module := wasm.GetModule()
-
-			result, err := wasm.CallModuleFunction(module, wasmFunctionName, funcParam, ctx)
-
-			// TODO
-			/*
-				- define header
-				- content type -> GetContentType
-				- ...
-			*/
-
-			if err != nil {
-				response.Write([]byte(err.Error()))
-			}
-			response.Write(result)
-
+			body = GetBody(request)
 		default:
-			//response.Header().Set("Allow", "GET, POST, OPTIONS")
-			http.Error(response, "method not allowed", http.StatusMethodNotAllowed)
+			body = "" // 🚧 work in progress
 		}
 
+		header, err := GetHeader(request.Header) // default value of header is "{}" if error
+		if err != nil {
+			log.Printf("😡 error with the header: %s, default value: %s", err, header)
+		}
+		contentType := ContentType(request.Header)
+
+		requestData := map[string]string{
+			"body":   body,
+			"header": header, // -> JSON string
+			"type":   contentType,
+			"method": request.Method,
+			"host": request.Host,
+			"remoteAddr": request.RemoteAddr,
+			"requestURI": request.RequestURI,
+		}
+
+		// create the parameter for the function from the requestData
+		funcParam, err := GetJSON(requestData)
+		if err != nil {
+			log.Printf("😡 error with the function parameter: %s, default value: %s", err, funcParam)
+		}
+
+		module := wasm.GetModule()
+
+		// call the wasm function
+		result, err := wasm.CallModuleFunction(module, wasmFunctionName, funcParam, ctx)
+
+		if err != nil {
+			log.Printf("😡 error with the result of the function: %s", err)
+			response.Write([]byte(err.Error()))
+		}
+
+		// prepare the response data
+		var resultData map[string]interface{}
+		err = json.Unmarshal(result, &resultData)
+		if err != nil {
+			log.Printf("😡 error when unmarshal the result: %s", err)
+			response.Write([]byte(err.Error()))
+		}
+
+		// read the header from the result of the function
+		resultHeader := resultData["header"].(map[string]interface{})
+		// set the header od the response with the header from the result of the function
+		for key, element := range resultHeader {
+			response.Header().Set(key, element.([]interface{})[0].(string))
+		}
+		// send the response to the client
+		response.Write([]byte(resultData["body"].(string)))
 	})
 
 	var errListening error

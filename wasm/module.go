@@ -68,7 +68,7 @@ func Initialize(ctx context.Context, wasmFilePath string, goModFuncs []ModuleFun
 	DefineHostFuncPrintStr(builder)
 
 	if goModFuncs != nil {
-		// TODO
+		// TODO: add user defined host functions
 	}
 
 	// Instantiate builder and default host functions

@@ -51,11 +51,13 @@ func functionHandler(valuePosition *uint32, length uint32) uint64 {
 
 	printStr("🤖 parameter: " + string(valueBytes))
 
-	jsonStr := string(valueBytes)
+	//jsonStr := string(valueBytes)
 
 	var data map[string]interface{}
 
-	err := json.Unmarshal([]byte(jsonStr), &data)
+	//err := json.Unmarshal([]byte(jsonStr), &data)
+
+	err := json.Unmarshal(valueBytes, &data)
 	if err != nil {
 		printStr("😡 Error: " + err.Error())
 	}
@@ -78,11 +80,21 @@ func functionHandler(valuePosition *uint32, length uint32) uint64 {
 
 	}
 
-	// TODO:return something more complicated
+	responseData := map[string]interface{}{
+		"body": `{"message": "👋 Hello Peeps🤗"}`,
+		"header": map[string][]string{
+			"Content-Type": {"application/json; charset=utf-8"},
+		},
+	}
+	jsonData, err := json.Marshal(responseData)
+	if err != nil {
+		pos, size := copyToMemory([]byte(`{"error":"`+err.Error()+`"}`))
+		return pack(pos, size)
+	}
 
 	// copy the value to memory
 	// get the position and the size of the buffer (in memory)
-	pos, size := copyToMemory([]byte("Hello Peeps"))
+	pos, size := copyToMemory(jsonData)
 
 	// return the position and size
 	return pack(pos, size)
